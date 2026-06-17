@@ -4,6 +4,7 @@ import type { GiteaContext } from "../src/gitea/context";
 import type { Config } from "../src/config";
 
 const baseConfig: Config = {
+  triggerPhrases: ["@claude", "@ClaudeCode"],
   triggerPhrase: "@claude",
   assigneeTrigger: "claude-bot",
   labelTrigger: "claude",
@@ -44,6 +45,33 @@ describe("checkTrigger", () => {
       payload: { comment: { body: "email me @claudexyz" } },
     });
     expect(checkTrigger(c, baseConfig)).toBe(false);
+  });
+
+  test("matches @Claude case-insensitively", () => {
+    const c = ctx({
+      eventName: "issue_comment",
+      payload: { comment: { body: "Hey @Claude can you help?" } },
+    });
+    expect(checkTrigger(c, baseConfig)).toBe(true);
+  });
+
+  test("matches the @ClaudeCode phrase", () => {
+    const c = ctx({
+      eventName: "issue_comment",
+      payload: { comment: { body: "ping @ClaudeCode please" } },
+    });
+    expect(checkTrigger(c, baseConfig)).toBe(true);
+  });
+
+  test("@claude does not match inside @claudecode", () => {
+    const c = ctx({
+      eventName: "issue_comment",
+      payload: { comment: { body: "see @claudecode" } },
+    });
+    // Matches via the @ClaudeCode phrase, not the @claude phrase.
+    expect(
+      checkTrigger(c, { ...baseConfig, triggerPhrases: ["@claude"] }),
+    ).toBe(false);
   });
 
   test("matches Gitea review using review.content", () => {

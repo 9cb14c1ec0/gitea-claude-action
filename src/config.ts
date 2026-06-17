@@ -4,6 +4,9 @@
  */
 
 export type Config = {
+  /** Phrases that trigger Claude (matched case-insensitively). */
+  triggerPhrases: string[];
+  /** Primary phrase, used for display in the prompt. */
   triggerPhrase: string;
   assigneeTrigger: string;
   labelTrigger: string;
@@ -30,8 +33,14 @@ function splitList(value: string | undefined): string[] {
 
 export function loadConfig(): Config {
   const maxTurnsRaw = process.env.MAX_TURNS?.trim();
+  const parsedPhrases = splitList(process.env.TRIGGER_PHRASE);
+  // Default to @claude and @ClaudeCode; matching is case-insensitive, so
+  // @Claude, @claudecode, etc. are covered too.
+  const triggerPhrases =
+    parsedPhrases.length > 0 ? parsedPhrases : ["@claude", "@ClaudeCode"];
   return {
-    triggerPhrase: process.env.TRIGGER_PHRASE || "@claude",
+    triggerPhrases,
+    triggerPhrase: triggerPhrases[0]!,
     assigneeTrigger: process.env.ASSIGNEE_TRIGGER || "",
     labelTrigger: process.env.LABEL_TRIGGER || "",
     baseBranch: process.env.BASE_BRANCH || undefined,

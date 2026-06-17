@@ -11,15 +11,22 @@ export function escapeRegExp(s: string): string {
   return s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
 
-/** Whole-phrase match bounded by start/end or surrounding whitespace/punctuation. */
-function mentions(text: string, phrase: string): boolean {
-  if (!text || !phrase) return false;
-  const re = new RegExp(`(^|\\s)${escapeRegExp(phrase)}([\\s.,!?;:]|$)`);
-  return re.test(text);
+/**
+ * Whole-phrase match (case-insensitive) for any of the configured phrases,
+ * bounded by start/end or surrounding whitespace/punctuation so that e.g.
+ * `@claude` does not match inside `@claudecode`.
+ */
+function mentions(text: string, phrases: string[]): boolean {
+  if (!text) return false;
+  return phrases.some((phrase) => {
+    if (!phrase) return false;
+    const re = new RegExp(`(^|\\s)${escapeRegExp(phrase)}([\\s.,!?;:]|$)`, "i");
+    return re.test(text);
+  });
 }
 
 export function checkTrigger(ctx: GiteaContext, config: Config): boolean {
-  const { triggerPhrase, assigneeTrigger, labelTrigger } = config;
+  const { triggerPhrases, assigneeTrigger, labelTrigger } = config;
   const p = ctx.payload;
 
   // Assignee trigger (on assignment or issue creation).
@@ -48,8 +55,8 @@ export function checkTrigger(ctx: GiteaContext, config: Config): boolean {
   // Phrase in newly-opened issue body/title.
   if (ctx.eventName === "issues" && ctx.eventAction === "opened") {
     if (
-      mentions(p.issue?.body || "", triggerPhrase) ||
-      mentions(p.issue?.title || "", triggerPhrase)
+      mentions(p.issue?.body || "", triggerPhrases) ||
+      mentions(p.issue?.title || "", triggerPhrases)
     ) {
       return true;
     }
@@ -59,14 +66,22 @@ export function checkTrigger(ctx: GiteaContext, config: Config): boolean {
   if (ctx.eventName === "pull_request") {
     const pr = p.pull_request || {};
     if (
-      mentions(pr.body || "", triggerPhrase) ||
-      mentions(pr.title || "", triggerPhrase)
+      mentions(pr.body || "", triggerPhrases) ||
+      mentions(pr.title || "", triggerPhrases)
     ) {
       return true;
     }
-    const user = triggerPhrase.replace(/^@/, "");
+    const reviewerNames = triggerPhrases.map((ph) =>
+      ph.replace(/^@/, "").toLowerCase(),
+    );
     const reviewers: any[] = pr.requested_reviewers || [];
-    if (reviewers.some((r) => r?.login === user)) return true;
+    if (
+      reviewers.some((r) =>
+        reviewerNames.includes((r?.login || "").toLowerCase()),
+      )
+    ) {
+      return true;
+    }
   }
 
   // Phrase in a comment or review body.
@@ -75,7 +90,7 @@ export function checkTrigger(ctx: GiteaContext, config: Config): boolean {
     ctx.eventName === "pull_request_review" ||
     ctx.eventName === "pull_request_review_comment"
   ) {
-    if (mentions(triggerBody(ctx) || "", triggerPhrase)) return true;
+    if (mentions(triggerBody(ctx) || "", triggerPhrases)) return true;
   }
 
   return false;

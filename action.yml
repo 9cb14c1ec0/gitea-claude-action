@@ -7,9 +7,9 @@ branding:
 inputs:
   # --- Triggering ---
   trigger_phrase:
-    description: "Phrase that triggers Claude when found in a comment, issue, or PR."
+    description: "Phrase(s) that trigger Claude when found in a comment, issue, or PR. Comma/newline separated; matched case-insensitively. Defaults to '@claude' and '@ClaudeCode'."
     required: false
-    default: "@claude"
+    default: ""
   assignee_trigger:
     description: "Username whose assignment to an issue triggers Claude."
     required: false

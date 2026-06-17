@@ -62,7 +62,7 @@ jobs:
 
 | Input | Default | Description |
 | --- | --- | --- |
-| `trigger_phrase` | `@claude` | Phrase that triggers Claude. |
+| `trigger_phrase` | `@claude`, `@ClaudeCode` | Phrase(s) that trigger Claude. Comma/newline separated, matched case-insensitively (so `@Claude` works too). |
 | `assignee_trigger` | `""` | Username whose assignment triggers Claude. |
 | `label_trigger` | `""` | Label whose application triggers Claude. |
 | `base_branch` | repo default | Base branch for new branches. |
