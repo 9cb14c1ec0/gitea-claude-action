@@ -1,0 +1,147 @@
+name: "Gitea Claude Action"
+description: "Run Claude in Gitea (or GitHub) Actions to respond to issues and pull requests."
+branding:
+  icon: "at-sign"
+  color: "orange"
+
+inputs:
+  # --- Triggering ---
+  trigger_phrase:
+    description: "Phrase that triggers Claude when found in a comment, issue, or PR."
+    required: false
+    default: "@claude"
+  assignee_trigger:
+    description: "Username whose assignment to an issue triggers Claude."
+    required: false
+    default: ""
+  label_trigger:
+    description: "Label whose application to an issue triggers Claude."
+    required: false
+    default: ""
+
+  # --- Branching ---
+  base_branch:
+    description: "Base branch for new branches (defaults to the repo default branch)."
+    required: false
+    default: ""
+  branch_prefix:
+    description: "Prefix for branches Claude creates."
+    required: false
+    default: "claude/"
+
+  # --- Claude configuration ---
+  model:
+    description: "Model to use (e.g. claude-opus-4-8). Defaults to the SDK default."
+    required: false
+    default: ""
+  fallback_model:
+    description: "Fallback model if the primary is overloaded."
+    required: false
+    default: ""
+  allowed_tools:
+    description: "Additional tools to allow (comma or newline separated)."
+    required: false
+    default: ""
+  disallowed_tools:
+    description: "Tools to disallow (comma or newline separated)."
+    required: false
+    default: ""
+  custom_instructions:
+    description: "Extra instructions appended to Claude's system prompt."
+    required: false
+    default: ""
+  max_turns:
+    description: "Maximum number of agent turns (blank = no limit)."
+    required: false
+    default: ""
+  timeout_minutes:
+    description: "Timeout in minutes for the Claude run."
+    required: false
+    default: "30"
+
+  # --- Commits ---
+  claude_git_name:
+    description: "git user.name for commits Claude makes."
+    required: false
+    default: "Claude"
+  claude_git_email:
+    description: "git user.email for commits Claude makes."
+    required: false
+    default: "claude@anthropic.com"
+
+  # --- Authentication ---
+  anthropic_api_key:
+    description: "Anthropic API key."
+    required: false
+    default: ""
+  claude_code_oauth_token:
+    description: "Claude Code OAuth token (alternative to anthropic_api_key)."
+    required: false
+    default: ""
+  gitea_token:
+    description: "Gitea/GitHub token with repo + PR permissions (defaults to GITHUB_TOKEN)."
+    required: false
+    default: ""
+
+outputs:
+  triggered:
+    description: "Whether the trigger phrase/condition was matched ('true'/'false')."
+    value: ${{ steps.claude.outputs.triggered }}
+  conclusion:
+    description: "'success' or 'failure' for the Claude run."
+    value: ${{ steps.claude.outputs.conclusion }}
+  cost_usd:
+    description: "Total cost of the run in USD."
+    value: ${{ steps.claude.outputs.cost_usd }}
+
+runs:
+  using: "composite"
+  steps:
+    - name: Install Bun
+      uses: oven-sh/setup-bun@v2
+      with:
+        bun-version: "1.2.11"
+
+    - name: Install dependencies
+      shell: bash
+      run: |
+        cd "${{ github.action_path }}"
+        bun install --frozen-lockfile
+
+    - name: Run Claude
+      id: claude
+      shell: bash
+      working-directory: ${{ github.workspace }}
+      run: bun run "${{ github.action_path }}/src/index.ts"
+      env:
+        # Triggering
+        TRIGGER_PHRASE: ${{ inputs.trigger_phrase }}
+        ASSIGNEE_TRIGGER: ${{ inputs.assignee_trigger }}
+        LABEL_TRIGGER: ${{ inputs.label_trigger }}
+        # Branching
+        BASE_BRANCH: ${{ inputs.base_branch }}
+        BRANCH_PREFIX: ${{ inputs.branch_prefix }}
+        # Claude config
+        MODEL: ${{ inputs.model }}
+        FALLBACK_MODEL: ${{ inputs.fallback_model }}
+        ALLOWED_TOOLS: ${{ inputs.allowed_tools }}
+        DISALLOWED_TOOLS: ${{ inputs.disallowed_tools }}
+        CUSTOM_INSTRUCTIONS: ${{ inputs.custom_instructions }}
+        MAX_TURNS: ${{ inputs.max_turns }}
+        TIMEOUT_MINUTES: ${{ inputs.timeout_minutes }}
+        # Commits
+        CLAUDE_GIT_NAME: ${{ inputs.claude_git_name }}
+        CLAUDE_GIT_EMAIL: ${{ inputs.claude_git_email }}
+        # Auth + tokens
+        ANTHROPIC_API_KEY: ${{ inputs.anthropic_api_key }}
+        CLAUDE_CODE_OAUTH_TOKEN: ${{ inputs.claude_code_oauth_token }}
+        OVERRIDE_GITHUB_TOKEN: ${{ inputs.gitea_token }}
+        GITHUB_TOKEN: ${{ github.token }}
+        # Context (provided by the Actions runner)
+        GITHUB_EVENT_NAME: ${{ github.event_name }}
+        GITHUB_EVENT_PATH: ${{ github.event_path }}
+        GITHUB_REPOSITORY: ${{ github.repository }}
+        GITHUB_RUN_ID: ${{ github.run_id }}
+        GITHUB_ACTOR: ${{ github.actor }}
+        GITHUB_SERVER_URL: ${{ github.server_url }}
+        GITHUB_WORKSPACE: ${{ github.workspace }}

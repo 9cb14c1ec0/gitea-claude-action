@@ -1,0 +1,22 @@
+{
+  "name": "gitea-claude-action",
+  "version": "0.1.0",
+  "description": "Run Claude in Gitea Actions to respond to issues and pull requests",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "test": "bun test",
+    "format": "prettier --write \"src/**/*.ts\" \"test/**/*.ts\"",
+    "format:check": "prettier --check \"src/**/*.ts\" \"test/**/*.ts\""
+  },
+  "dependencies": {
+    "@anthropic-ai/claude-agent-sdk": "latest",
+    "zod": "^3.25.0"
+  },
+  "devDependencies": {
+    "@types/bun": "latest",
+    "prettier": "^3.3.0",
+    "typescript": "^5.5.0"
+  }
+}
